@@ -44,25 +44,28 @@ for pro, city in pro_city:
             club_res = requests.get(club_url)
             se = etree.HTML(club_res.content)
             detail_area = se.xpath("//div[@class='morespace']/p[1]/text()").pop()[3:].strip()
+            try:
 
-            with connection.cursor() as cursor:
-                sql = "INSERT INTO `club` ( `name`, `province`, `city`, `detail_area`,`club_id`) VALUES (%s, %s, %s, %s, %s)"
-                cursor.execute(sql, (club_name, pro, city, detail_area, club_alias_id))
-                cursor.execute("SELECT id from `club` WHERE `name`=%s", (club_name,))
-                club_id = cursor.fetchone()['id']
-                for le in club_lessons:
-                    cursor.execute("SELECT id from `lesson` WHERE `name`=%s", (le,))
-                    le_id = cursor.fetchone()
-                    if not le_id:
-                        sql = "INSERT INTO `lesson` ( `name`) VALUES (%s)"
-                        cursor.execute(sql, (le,))
+                with connection.cursor() as cursor:
+                    sql = "INSERT INTO `club` ( `name`, `province`, `city`, `detail_area`,`club_id`) VALUES (%s, %s, %s, %s, %s)"
+                    cursor.execute(sql, (club_name, pro, city, detail_area, club_alias_id))
+                    cursor.execute("SELECT id from `club` WHERE `name`=%s", (club_name,))
+                    club_id = cursor.fetchone()['id']
+                    for le in club_lessons:
                         cursor.execute("SELECT id from `lesson` WHERE `name`=%s", (le,))
                         le_id = cursor.fetchone()
-                    le_id = le_id['id']
-                    print le_id
-                    sql = "INSERT INTO `club_lesson` ( `club_id`,`lesson_id`) VALUES (%s, %s)"
-                    cursor.execute(sql, (club_id, le_id))
-                    connection.commit()
+                        if not le_id:
+                            sql = "INSERT INTO `lesson` ( `name`) VALUES (%s)"
+                            cursor.execute(sql, (le,))
+                            cursor.execute("SELECT id from `lesson` WHERE `name`=%s", (le,))
+                            le_id = cursor.fetchone()
+                        le_id = le_id['id']
+                        print le_id
+                        sql = "INSERT INTO `club_lesson` ( `club_id`,`lesson_id`) VALUES (%s, %s)"
+                        cursor.execute(sql, (club_id, le_id))
+                        connection.commit()
+            except:
+                print 'error'
 
 
             print detail_area
@@ -72,28 +75,32 @@ for pro, city in pro_city:
                 continue
             coaches = coaches[4:]
             coaches = [etree.tostring(coach, method='html') for coach in coaches]
-            with connection.cursor() as cursor:
-                for coach in coaches:
-                    s = etree.HTML(coach)
-                    coach_name = s.xpath("//p/text()")[0].strip()[:-1].strip()
-                    lesson = s.xpath("//p/span/@labelname")[0][12:-1]
-                    cursor.execute("SELECT id from `coach` WHERE `name`=%s", (coach_name,))
-                    co_id = cursor.fetchone()
-                    if not co_id:
-                        cursor.execute("INSERT INTO `coach` (`name`) values (%s)", (coach_name,))
+            try:
+
+                with connection.cursor() as cursor:
+                    for coach in coaches:
+                        s = etree.HTML(coach)
+                        coach_name = s.xpath("//p/text()")[0].strip()[:-1].strip()
+                        lesson = s.xpath("//p/span/@labelname")[0][12:-1]
                         cursor.execute("SELECT id from `coach` WHERE `name`=%s", (coach_name,))
                         co_id = cursor.fetchone()
-                    co_id = co_id['id']
-                    cursor.execute("INSERT INTO `club_coach` (`club_id`,`coach_id`) values (%s,%s)", (club_id, co_id))
-                    cursor.execute("SELECT id from `lesson` WHERE `name`=%s", (lesson,))
-                    lesson_id = cursor.fetchone()
-                    if not lesson_id:
-                        cursor.execute("INSERT INTO `lesson` (`name`) values (%s)", (lesson, ))
+                        if not co_id:
+                            cursor.execute("INSERT INTO `coach` (`name`) values (%s)", (coach_name,))
+                            cursor.execute("SELECT id from `coach` WHERE `name`=%s", (coach_name,))
+                            co_id = cursor.fetchone()
+                        co_id = co_id['id']
+                        cursor.execute("INSERT INTO `club_coach` (`club_id`,`coach_id`) values (%s,%s)", (club_id, co_id))
                         cursor.execute("SELECT id from `lesson` WHERE `name`=%s", (lesson,))
                         lesson_id = cursor.fetchone()
-                    lesson_id = lesson_id['id']
-                    cursor.execute("INSERT INTO `lesson_coach` (`lesson_id`,`coach_id`) values (%s, %s)", (lesson_id, co_id))
-                    print coach_name, lesson
-                    connection.commit()
+                        if not lesson_id:
+                            cursor.execute("INSERT INTO `lesson` (`name`) values (%s)", (lesson, ))
+                            cursor.execute("SELECT id from `lesson` WHERE `name`=%s", (lesson,))
+                            lesson_id = cursor.fetchone()
+                        lesson_id = lesson_id['id']
+                        cursor.execute("INSERT INTO `lesson_coach` (`lesson_id`,`coach_id`) values (%s, %s)", (lesson_id, co_id))
+                        print coach_name, lesson
+                        connection.commit()
+            except:
+                print "error"
         page += 1
         print "----"
